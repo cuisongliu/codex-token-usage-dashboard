@@ -1,4 +1,4 @@
 interface:
   display_name: "Codex Token Usage Dashboard"
-  short_description: "Auto-install and open token usage dashboard"
-  default_prompt: "Use $codex-token-usage-dashboard to uninstall any old collector, install the dashboard, collect usage, and open the page."
+  short_description: "Auto-install and verify token dashboard"
+  default_prompt: "Use $codex-token-usage-dashboard to install the dashboard, restart the collector, open the page, and verify it in the browser."

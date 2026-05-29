@@ -21,9 +21,31 @@
 - `usage-data.example.js`
 - 源码和安装脚本
 
+## 安装 Codex Skill
+
+推荐用 `npx skills add` 安装这个 skill：
+
+```bash
+npx -y skills add cuisongliu/codex-token-usage-dashboard --skill codex-token-usage-dashboard --agent codex -g -y --copy
+```
+
+只查看仓库里有哪些 skill：
+
+```bash
+npx -y skills add cuisongliu/codex-token-usage-dashboard --list
+```
+
+安装后重启 Codex，然后使用：
+
+```text
+Use $codex-token-usage-dashboard to install the dashboard, restart the collector, open the page, and verify it in the browser.
+```
+
 ## 快速开始
 
 安装脚本会先从 `~/.codex/config.toml` 和 `~/.codex/auth.json` 生成本地私有 `config.yaml`，然后立即采集一次数据，再注册每 5 分钟采集任务。
+
+直接运行本仓库脚本：
 
 macOS / Linux:
 
@@ -65,13 +87,24 @@ skill 的默认边界：
 - 自动生成或复用本地 `config.yaml`。
 - 自动采集一次数据并生成 `usage-data.js`。
 - 自动打开 `daily-token-usage.html`。
+- 在 Codex Browser 里用临时 `127.0.0.1` 静态预览检查页面是否符合预期。
 - 不打印、不提交、不删除 `config.yaml` 里的密钥。
 
 示例：
 
 ```text
-Use $codex-token-usage-dashboard to install the dashboard, restart the collector, and open the page.
+Use $codex-token-usage-dashboard to install the dashboard, restart the collector, open the page, and verify it in the browser.
 ```
+
+浏览器验收标准：
+
+- 页面不是空白页。
+- 能看到 `Token 用量`、`日`、`周`、`月`、`每日明细`。
+- 采集状态表明页面读取的是本地 `usage-data.js`；如果只显示示例数据，需要明确提示。
+- 页面没有配置读取失败、token 缺失或接口错误提示。
+- 页面上不能暴露 `auth_token`、`Bearer`、真实 API key。
+
+Codex Browser 如果不能直接打开 `file://`，就用 Python 标准库临时启动 `127.0.0.1` 静态预览做验收；这只用于检查页面，不是产品运行时。
 
 ## 手动运行
 

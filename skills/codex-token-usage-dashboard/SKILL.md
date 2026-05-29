@@ -1,11 +1,11 @@
 ---
 name: codex-token-usage-dashboard
-description: Automatically install, configure, run, display, and troubleshoot the Codex Token Usage Dashboard from the cuisongliu/codex-token-usage-dashboard repository. Use when the user wants a hands-off install flow that removes any previous scheduled collector, generates config.yaml from Codex config, collects token usage, enables five-minute background collection, opens the static dashboard page, verifies no secrets are committed, or debugs installation on macOS, Linux, or Windows.
+description: Automatically install, configure, run, display, browser-verify, and troubleshoot the Codex Token Usage Dashboard from the cuisongliu/codex-token-usage-dashboard repository. Use when the user wants a hands-off install flow that removes any previous scheduled collector, generates config.yaml from Codex config, collects token usage, enables five-minute background collection, opens the static dashboard page, verifies the page in a browser, verifies no secrets are committed, installs this skill with npx skills add, or debugs installation on macOS, Linux, or Windows.
 ---
 
 # Codex Token Usage Dashboard
 
-Use this skill to install and operate the static Codex token usage dashboard. The default behavior is automatic: remove any existing scheduled collector for this dashboard, install the current one, collect once, and open the page.
+Use this skill to install and operate the static Codex token usage dashboard. The default behavior is automatic: remove any existing scheduled collector for this dashboard, install the current one, collect once, open the page, and verify the visible browser result.
 
 ## Repository
 
@@ -30,6 +30,7 @@ Do:
 - Automatically run the platform installer.
 - Automatically verify local generated files.
 - Automatically open `daily-token-usage.html` after a successful install.
+- Automatically verify the opened page in the Codex in-app browser when Browser is available.
 - Reuse an existing `config.yaml` unless the user explicitly asks to regenerate it.
 
 Do not:
@@ -45,12 +46,13 @@ Do not:
 When this skill is invoked, execute the workflow in the current turn instead of only explaining the commands, unless the user asks for a dry run.
 
 1. Clone or enter the repository.
-2. Uninstall any previous dashboard scheduled collector. Ignore "not found" failures.
-3. Run the platform installer.
+2. Uninstall any previous dashboard scheduled collector. Ignore "not found" failures during uninstall.
+3. Run the platform installer from the repo.
 4. Confirm `config.yaml` was generated or reused locally.
 5. Confirm `usage-data.json` and `usage-data.js` were generated locally.
 6. Open `daily-token-usage.html`.
-7. Confirm the scheduled task exists and report the opened local path.
+7. Use Browser to inspect the opened page. If Browser blocks `file://`, start a temporary Python stdlib static server on `127.0.0.1`, inspect `/daily-token-usage.html`, then stop the server.
+8. Confirm the scheduled task exists and report the opened local path.
 
 Never ask the user to paste their API key. The installer reads Codex credentials from:
 
@@ -58,6 +60,22 @@ Never ask the user to paste their API key. The installer reads Codex credentials
 ~/.codex/config.toml
 ~/.codex/auth.json
 ```
+
+## Install This Skill
+
+To install this skill with the skills CLI:
+
+```bash
+npx -y skills add cuisongliu/codex-token-usage-dashboard --skill codex-token-usage-dashboard --agent codex -g -y --copy
+```
+
+To list available skills before installing:
+
+```bash
+npx -y skills add cuisongliu/codex-token-usage-dashboard --list
+```
+
+After installing, tell the user to restart Codex before invoking `$codex-token-usage-dashboard`.
 
 ## Commands
 
@@ -120,6 +138,22 @@ Open dashboard from an agent:
 - Linux with desktop: run `xdg-open daily-token-usage.html`.
 - Windows PowerShell: run `Start-Process .\daily-token-usage.html`.
 - Headless environment: report the absolute path to `daily-token-usage.html`.
+
+## Browser Acceptance
+
+After opening the dashboard, use Browser in the Codex app to inspect the page. Do not rely only on OS-level `open`.
+
+Browser may block direct `file://` navigation. If that happens, start a temporary Python stdlib static server from the dashboard directory, navigate Browser to `http://127.0.0.1:<port>/daily-token-usage.html`, verify the page, and stop the server. This local server is only a verification surface; do not turn it into the dashboard runtime.
+
+The expected page must satisfy:
+
+- The page is not blank.
+- The visible page contains `Token 用量`, `日`, `周`, `月`, and `每日明细`.
+- The status area indicates the page is reading local `usage-data.js`. If it shows example data, explicitly report that as not fully verified.
+- The page does not show config-load, missing-token, or API error text.
+- The page does not expose `auth_token`, `Bearer`, `sk-`, or a real API key.
+
+If Browser is unavailable or the environment is headless, report that browser verification was not executed, then verify `usage-data.js`, `usage-data.json`, and `python3 usage-static.py print-config` from the filesystem instead.
 
 Uninstall scheduled collection on macOS or Linux:
 
