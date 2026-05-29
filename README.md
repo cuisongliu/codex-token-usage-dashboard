@@ -55,12 +55,22 @@ Linux 可以用 `xdg-open daily-token-usage.html`，Windows 可以直接双击 H
 skills/codex-token-usage-dashboard
 ```
 
-用户可以把这个目录安装到自己的 Codex skills 目录后，用 `$codex-token-usage-dashboard` 让 Codex 帮忙安装、生成 `config.yaml`、采集数据、打开页面、注册或卸载定时任务、排查安装问题。
+用户可以把这个目录安装到自己的 Codex skills 目录后，用 `$codex-token-usage-dashboard` 让 Codex 自动完成安装和展示。
+
+skill 的默认边界：
+
+- 自动进入或 clone 仓库。
+- 自动卸载旧的 dashboard 定时采集任务。
+- 自动运行当前平台安装脚本。
+- 自动生成或复用本地 `config.yaml`。
+- 自动采集一次数据并生成 `usage-data.js`。
+- 自动打开 `daily-token-usage.html`。
+- 不打印、不提交、不删除 `config.yaml` 里的密钥。
 
 示例：
 
 ```text
-Use $codex-token-usage-dashboard to install the dashboard and collect Codex token usage.
+Use $codex-token-usage-dashboard to install the dashboard, restart the collector, and open the page.
 ```
 
 ## 手动运行

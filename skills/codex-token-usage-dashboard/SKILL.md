@@ -1,11 +1,11 @@
 ---
 name: codex-token-usage-dashboard
-description: Install, configure, operate, and troubleshoot the Codex Token Usage Dashboard from the cuisongliu/codex-token-usage-dashboard repository. Use when the user wants to install the dashboard, generate config.yaml from Codex config, collect token usage, enable or disable five-minute background collection, open the static dashboard, verify no secrets are committed, or debug dashboard installation on macOS, Linux, or Windows.
+description: Automatically install, configure, run, display, and troubleshoot the Codex Token Usage Dashboard from the cuisongliu/codex-token-usage-dashboard repository. Use when the user wants a hands-off install flow that removes any previous scheduled collector, generates config.yaml from Codex config, collects token usage, enables five-minute background collection, opens the static dashboard page, verifies no secrets are committed, or debugs installation on macOS, Linux, or Windows.
 ---
 
 # Codex Token Usage Dashboard
 
-Use this skill to help a user install and operate the static Codex token usage dashboard.
+Use this skill to install and operate the static Codex token usage dashboard. The default behavior is automatic: remove any existing scheduled collector for this dashboard, install the current one, collect once, and open the page.
 
 ## Repository
 
@@ -21,14 +21,36 @@ Default local directory:
 codex-token-usage-dashboard
 ```
 
-## Workflow
+## Boundaries
+
+Do:
+
+- Automatically clone or enter the repository.
+- Automatically uninstall the dashboard's existing scheduled collector before installing.
+- Automatically run the platform installer.
+- Automatically verify local generated files.
+- Automatically open `daily-token-usage.html` after a successful install.
+- Reuse an existing `config.yaml` unless the user explicitly asks to regenerate it.
+
+Do not:
+
+- Print, paste, or commit `auth_token`.
+- Commit `config.yaml`, `usage-data.json`, `usage-data.js`, or logs.
+- Delete the user's `config.yaml` during uninstall.
+- Add another web server or Node.js runtime.
+- Force push or overwrite unrelated repository changes.
+
+## Default Auto-Install Workflow
+
+When this skill is invoked, execute the workflow in the current turn instead of only explaining the commands, unless the user asks for a dry run.
 
 1. Clone or enter the repository.
-2. Run the platform installer.
-3. Confirm `config.yaml` was generated locally.
-4. Confirm `usage-data.json` and `usage-data.js` were generated locally.
-5. Open `daily-token-usage.html`.
-6. If the user wants background collection, confirm the scheduled task exists.
+2. Uninstall any previous dashboard scheduled collector. Ignore "not found" failures.
+3. Run the platform installer.
+4. Confirm `config.yaml` was generated or reused locally.
+5. Confirm `usage-data.json` and `usage-data.js` were generated locally.
+6. Open `daily-token-usage.html`.
+7. Confirm the scheduled task exists and report the opened local path.
 
 Never ask the user to paste their API key. The installer reads Codex credentials from:
 
@@ -46,13 +68,27 @@ git clone https://github.com/cuisongliu/codex-token-usage-dashboard.git
 cd codex-token-usage-dashboard
 ```
 
-Install on macOS or Linux:
+Auto-install on macOS or Linux:
+
+```bash
+./uninstall.sh || true
+./install.sh
+```
+
+Auto-install on Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+Install only on macOS or Linux:
 
 ```bash
 ./install.sh
 ```
 
-Install on Windows PowerShell:
+Install only on Windows PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1
@@ -77,6 +113,13 @@ open daily-token-usage.html
 ```
 
 Use `xdg-open daily-token-usage.html` on Linux. On Windows, open the HTML file directly.
+
+Open dashboard from an agent:
+
+- macOS: run `open daily-token-usage.html`.
+- Linux with desktop: run `xdg-open daily-token-usage.html`.
+- Windows PowerShell: run `Start-Process .\daily-token-usage.html`.
+- Headless environment: report the absolute path to `daily-token-usage.html`.
 
 Uninstall scheduled collection on macOS or Linux:
 
@@ -112,6 +155,8 @@ Check generated config without exposing the token:
 python3 usage-static.py print-config
 ```
 
+The printed config must redact the token as `***`.
+
 Run syntax checks when editing the repo:
 
 ```bash
@@ -137,6 +182,23 @@ Check Linux cron fallback:
 ```bash
 crontab -l | grep io.github.cuisongliu.codex-token-usage-dashboard
 ```
+
+Check Windows scheduled task:
+
+```powershell
+Get-ScheduledTask -TaskName CodexTokenUsageDashboard
+```
+
+## Refreshing Config
+
+Only regenerate `config.yaml` when the user explicitly asks to reload credentials or provider settings:
+
+```bash
+python3 usage-static.py sync-config --force
+python3 usage-static.py collect
+```
+
+After regeneration, open the page again.
 
 ## Safety
 
