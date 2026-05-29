@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Token 用量 BI 看板</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #23211c;
+        --muted: #6f695d;
+        --fine: #c9bda7;
+        --paper: #f8f3e7;
+        --paper-strong: #efe4cf;
+        --accent: #9a6b25;
+        --teal: #2f6f73;
+        --red: #9b4b3f;
+        --green: #5c7543;
+        --shadow: 0 28px 80px rgba(74, 58, 33, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(rgba(84, 70, 48, 0.07) 1px, transparent 1px) 0 0 / 42px 42px,
+          linear-gradient(90deg, rgba(84, 70, 48, 0.06) 1px, transparent 1px) 0 0 / 42px 42px,
+          linear-gradient(135deg, #fbf7ed 0%, #f0e6d5 48%, #dfd0b8 100%);
+        color: var(--ink);
+        font-family: "Songti SC", "Noto Serif CJK SC", STSong, Georgia, serif;
+      }
+
+      .app {
+        width: min(1540px, calc(100vw - 48px));
+        margin: 0 auto;
+        padding: 34px 0 44px;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+        gap: 28px;
+        align-items: stretch;
+      }
+
+      .ledger,
+      .panel,
+      .metric,
+      .table-panel {
+        border: 1px solid rgba(88, 70, 45, 0.24);
+        border-radius: 6px;
+        background:
+          linear-gradient(180deg, rgba(255, 252, 244, 0.96), rgba(245, 236, 218, 0.96)),
+          var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .ledger {
+        position: relative;
+        overflow: hidden;
+        min-height: 640px;
+      }
+
+      .ledger::before {
+        position: absolute;
+        inset: 22px;
+        border: 2px solid rgba(54, 48, 38, 0.58);
+        content: "";
+        pointer-events: none;
+      }
+
+      .ledger::after {
+        position: absolute;
+        width: 44px;
+        height: 44px;
+        left: 40px;
+        top: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f4dc8b, #a36f26);
+        box-shadow:
+          inset -6px -8px 14px rgba(70, 46, 10, 0.25),
+          inset 7px 8px 11px rgba(255, 255, 255, 0.4),
+          0 6px 18px rgba(83, 54, 15, 0.28);
+        content: "";
+      }
+
+      .ledger-inner {
+        position: relative;
+        z-index: 1;
+        padding: 96px 50px 44px 78px;
+      }
+
+      .topline {
+        display: flex;
+        gap: 18px;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+      }
+
+      .eyebrow::before {
+        width: 42px;
+        height: 2px;
+        background: var(--accent);
+        content: "";
+      }
+
+      h1 {
+        margin: 14px 0 0;
+        font-size: clamp(42px, 5vw, 74px);
+        line-height: 0.96;
+        letter-spacing: 0;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.8;
+        text-align: right;
+      }
+
+      .tabs {
+        display: inline-grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid rgba(96, 78, 50, 0.22);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.48);
+      }
+
+      .tab {
+        min-width: 80px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font: 700 15px "Songti SC", "Noto Serif CJK SC", serif;
+        padding: 10px 14px;
+      }
+
+      .tab.active {
+        background: var(--ink);
+        color: #fff;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 24px 0;
+      }
+
+      .metric {
+        min-height: 116px;
+        padding: 18px 18px 16px;
+        box-shadow: none;
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 10px;
+        font-size: clamp(24px, 2.8vw, 36px);
+        font-variant-numeric: tabular-nums;
+        line-height: 1.05;
+      }
+
+      .metric small {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .chart {
+        height: 230px;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(14px, 1fr);
+        gap: 8px;
+        align-items: end;
+        margin-top: 12px;
+        padding: 18px 0 6px;
+        border-top: 2px solid rgba(54, 48, 38, 0.62);
+        border-bottom: 2px solid rgba(54, 48, 38, 0.62);
+      }
+
+      .bar {
+        position: relative;
+        min-height: 4px;
+        border-radius: 4px 4px 0 0;
+        background: linear-gradient(180deg, var(--teal), rgba(47, 111, 115, 0.36));
+      }
+
+      .bar.today {
+        background: linear-gradient(180deg, var(--accent), rgba(154, 107, 37, 0.34));
+      }
+
+      .bar::after {
+        position: absolute;
+        right: 50%;
+        bottom: -24px;
+        transform: translateX(50%) rotate(-45deg);
+        color: var(--muted);
+        content: attr(data-label);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .side {
+        display: grid;
+        gap: 18px;
+      }
+
+      .panel {
+        padding: 24px;
+        box-shadow: var(--shadow);
+      }
+
+      .panel h2,
+      .table-panel h2 {
+        margin: 0 0 16px;
+        font-size: 24px;
+        letter-spacing: 0;
+      }
+
+      .status {
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.8;
+      }
+
+      .status.error {
+        color: var(--red);
+      }
+
+      .split {
+        display: grid;
+        gap: 12px;
+      }
+
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        border-bottom: 1px solid rgba(104, 92, 70, 0.2);
+        padding: 12px 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .row strong {
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+
+      .model-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .model {
+        display: grid;
+        gap: 8px;
+      }
+
+      .model-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 14px;
+      }
+
+      .track {
+        height: 9px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(91, 78, 55, 0.14);
+      }
+
+      .fill {
+        width: var(--w, 0%);
+        height: 100%;
+        border-radius: inherit;
+        background: var(--green);
+      }
+
+      .table-panel {
+        margin-top: 28px;
+        padding: 24px;
+      }
+
+      .table-scroll {
+        overflow: auto;
+      }
+
+      table {
+        width: 100%;
+        min-width: 900px;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid rgba(94, 79, 55, 0.24);
+        padding: 13px 12px;
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      th {
+        color: #3f392f;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      td {
+        font-size: 15px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .num {
+        text-align: right;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .link-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        border: 1px solid rgba(89, 74, 52, 0.24);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.54);
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 700;
+        padding: 0 14px;
+        text-decoration: none;
+      }
+
+      @media (max-width: 1100px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .side {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 760px) {
+        .app {
+          width: min(100vw - 24px, 680px);
+          padding-top: 18px;
+        }
+
+        .ledger-inner {
+          padding: 78px 22px 34px;
+        }
+
+        .topline {
+          display: block;
+        }
+
+        .meta {
+          margin-top: 16px;
+          text-align: left;
+        }
+
+        .metric-grid,
+        .side {
+          grid-template-columns: 1fr;
+        }
+
+        .chart {
+          height: 190px;
+        }
+
+        h1 {
+          font-size: 43px;
+        }
+      }
+    </style>
+    <script src="./usage-data.example.js"></script>
+  </head>
+  <body>
+    <main class="app">
+      <section class="shell">
+        <section class="ledger" aria-label="Token 用量 BI 看板">
+          <div class="ledger-inner">
+            <div class="topline">
+              <div>
+                <div class="eyebrow">SUB2API USAGE</div>
+                <h1>Token 用量</h1>
+              </div>
+              <div class="meta">
+                <div id="providerLabel">-</div>
+                <div id="updatedLabel">-</div>
+                <div id="rangeLabel">-</div>
+              </div>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="统计周期">
+              <button class="tab active" type="button" data-period="day">日</button>
+              <button class="tab" type="button" data-period="week">周</button>
+              <button class="tab" type="button" data-period="month">月</button>
+            </div>
+
+            <div class="metric-grid">
+              <div class="metric">
+                <span>总 Tokens</span>
+                <strong id="totalTokens">-</strong>
+                <small>输入 + 输出 + 缓存</small>
+              </div>
+              <div class="metric">
+                <span>请求数</span>
+                <strong id="requests">-</strong>
+                <small>API calls</small>
+              </div>
+              <div class="metric">
+                <span>费用</span>
+                <strong id="costUsd">-</strong>
+                <small>actual cost</small>
+              </div>
+              <div class="metric">
+                <span>输入</span>
+                <strong id="inputTokens">-</strong>
+                <small>prompt tokens</small>
+              </div>
+              <div class="metric">
+                <span>输出</span>
+                <strong id="outputTokens">-</strong>
+                <small>completion tokens</small>
+              </div>
+              <div class="metric">
+                <span>缓存读取</span>
+                <strong id="cacheReadTokens">-</strong>
+                <small>cache read</small>
+              </div>
+            </div>
+
+            <div class="chart" id="trendChart" aria-label="每日 token 趋势"></div>
+          </div>
+        </section>
+
+        <aside class="side">
+          <section class="panel">
+            <h2>采集状态</h2>
+            <div class="status" id="status">正在读取本地静态数据...</div>
+            <div class="split" style="margin-top: 16px">
+              <div class="row"><span>刷新周期</span><strong id="refreshLabel">-</strong></div>
+              <div class="row"><span>套餐状态</span><strong id="planStatus">-</strong></div>
+              <div class="row"><span>剩余天数</span><strong id="expiryLabel">-</strong></div>
+              <div class="row"><span>配置来源</span><strong>config.yaml</strong></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>Token 结构</h2>
+            <div class="split">
+              <div class="row"><span>输入</span><strong id="shareInput">-</strong></div>
+              <div class="row"><span>输出</span><strong id="shareOutput">-</strong></div>
+              <div class="row"><span>缓存写入</span><strong id="shareCacheCreate">-</strong></div>
+              <div class="row"><span>缓存读取</span><strong id="shareCacheRead">-</strong></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>模型分布</h2>
+            <div class="model-list" id="modelList"></div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="table-panel">
+        <div class="toolbar">
+          <h2>每日明细</h2>
+          <a class="link-button" id="csvLink" href="#" download="daily-token-usage.csv">导出 CSV</a>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th class="num">请求</th>
+                <th class="num">输入</th>
+                <th class="num">输出</th>
+                <th class="num">缓存写入</th>
+                <th class="num">缓存读取</th>
+                <th class="num">合计</th>
+                <th class="num">费用</th>
+              </tr>
+            </thead>
+            <tbody id="detailBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      let usageData = window.DAILY_TOKEN_USAGE_EXAMPLE_DATA || null;
+      let usingExampleData = true;
+      const els = {
+        providerLabel: document.getElementById("providerLabel"),
+        updatedLabel: document.getElementById("updatedLabel"),
+        rangeLabel: document.getElementById("rangeLabel"),
+        status: document.getElementById("status"),
+        refreshLabel: document.getElementById("refreshLabel"),
+        planStatus: document.getElementById("planStatus"),
+        expiryLabel: document.getElementById("expiryLabel"),
+        totalTokens: document.getElementById("totalTokens"),
+        requests: document.getElementById("requests"),
+        costUsd: document.getElementById("costUsd"),
+        inputTokens: document.getElementById("inputTokens"),
+        outputTokens: document.getElementById("outputTokens"),
+        cacheReadTokens: document.getElementById("cacheReadTokens"),
+        shareInput: document.getElementById("shareInput"),
+        shareOutput: document.getElementById("shareOutput"),
+        shareCacheCreate: document.getElementById("shareCacheCreate"),
+        shareCacheRead: document.getElementById("shareCacheRead"),
+        trendChart: document.getElementById("trendChart"),
+        modelList: document.getElementById("modelList"),
+        detailBody: document.getElementById("detailBody"),
+        csvLink: document.getElementById("csvLink"),
+      };
+
+      const nf = new Intl.NumberFormat("en-US");
+      const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+      let activePeriod = "day";
+
+      function n(value) {
+        return Number(value) || 0;
+      }
+
+      function fmt(value) {
+        return nf.format(Math.round(n(value)));
+      }
+
+      function money(value) {
+        return `${n(value).toFixed(2)} USD`;
+      }
+
+      function pct(part, total) {
+        if (!total) return "0%";
+        return `${((n(part) / n(total)) * 100).toFixed(1)}%`;
+      }
+
+      function period() {
+        return usageData.periods?.[activePeriod] || usageData.periods?.day || {};
+      }
+
+      function updateMetrics() {
+        const current = period();
+        const totals = current.totals || {};
+        const totalTokens = n(totals.total_tokens);
+        els.totalTokens.textContent = fmt(totalTokens);
+        els.requests.textContent = fmt(totals.requests);
+        els.costUsd.textContent = money(totals.actual_cost_usd);
+        els.inputTokens.textContent = fmt(totals.input_tokens);
+        els.outputTokens.textContent = fmt(totals.output_tokens);
+        els.cacheReadTokens.textContent = fmt(totals.cache_read_tokens);
+        els.rangeLabel.textContent =
+          current.start_date && current.end_date
+            ? `${current.name || ""} ${current.start_date} 至 ${current.end_date}`
+            : "-";
+
+        els.shareInput.textContent = `${fmt(totals.input_tokens)} / ${pct(totals.input_tokens, totalTokens)}`;
+        els.shareOutput.textContent = `${fmt(totals.output_tokens)} / ${pct(totals.output_tokens, totalTokens)}`;
+        els.shareCacheCreate.textContent = `${fmt(totals.cache_creation_tokens)} / ${pct(
+          totals.cache_creation_tokens,
+          totalTokens,
+        )}`;
+        els.shareCacheRead.textContent = `${fmt(totals.cache_read_tokens)} / ${pct(
+          totals.cache_read_tokens,
+          totalTokens,
+        )}`;
+      }
+
+      function renderChart() {
+        const days = usageData.days || [];
+        const max = Math.max(...days.map((day) => n(day.total_tokens)), 1);
+        const today = usageData.end_date;
+        els.trendChart.innerHTML = days
+          .map((day) => {
+            const height = Math.max(4, (n(day.total_tokens) / max) * 100);
+            const label = day.date.slice(5);
+            const title = `${day.date}: ${fmt(day.total_tokens)} tokens`;
+            const cls = day.date === today ? "bar today" : "bar";
+            return `<div class="${cls}" style="height:${height}%" data-label="${label}" title="${title}"></div>`;
+          })
+          .join("");
+      }
+
+      function renderModels() {
+        const models = usageData.model_stats || [];
+        if (!models.length) {
+          els.modelList.innerHTML = '<div class="status">暂无模型分布数据</div>';
+          return;
+        }
+        const max = Math.max(...models.map((item) => n(item.total_tokens || item.tokens)), 1);
+        els.modelList.innerHTML = models
+          .slice(0, 6)
+          .map((item) => {
+            const name = item.model || item.name || "unknown";
+            const tokens = n(item.total_tokens || item.tokens);
+            const width = Math.max(2, (tokens / max) * 100);
+            return `
+              <div class="model">
+                <div class="model-head"><span>${name}</span><strong>${compact.format(tokens)}</strong></div>
+                <div class="track"><div class="fill" style="--w:${width}%"></div></div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderTable() {
+        const rows = [...(usageData.days || [])].reverse();
+        els.detailBody.innerHTML = rows
+          .map(
+            (day) => `
+              <tr>
+                <td>${day.date}</td>
+                <td class="num">${fmt(day.requests)}</td>
+                <td class="num">${fmt(day.input_tokens)}</td>
+                <td class="num">${fmt(day.output_tokens)}</td>
+                <td class="num">${fmt(day.cache_creation_tokens)}</td>
+                <td class="num">${fmt(day.cache_read_tokens)}</td>
+                <td class="num">${fmt(day.total_tokens)}</td>
+                <td class="num">${money(day.actual_cost_usd)}</td>
+              </tr>
+            `,
+          )
+          .join("");
+      }
+
+      function renderCsv() {
+        const header = [
+          "date",
+          "requests",
+          "input_tokens",
+          "output_tokens",
+          "cache_creation_tokens",
+          "cache_read_tokens",
+          "total_tokens",
+          "actual_cost_usd",
+        ];
+        const rows = (usageData.days || []).map((day) => header.map((key) => day[key] ?? "").join(","));
+        const csv = [header.join(","), ...rows].join("\n");
+        els.csvLink.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      }
+
+      function render() {
+        if (!usageData) {
+          els.status.textContent =
+            "没有读取到 usage-data.js 或 usage-data.example.js。请先运行：python3 usage-static.py collect";
+          els.status.classList.add("error");
+          return;
+        }
+
+        els.providerLabel.textContent = `${usageData.provider || "-"} · ${usageData.base_url || "-"}`;
+        els.updatedLabel.textContent = `更新时间：${new Date(usageData.generated_at).toLocaleString()}`;
+        els.refreshLabel.textContent = `${usageData.refresh_minutes || 5} 分钟`;
+        els.planStatus.textContent = usageData.raw_usage_status || "-";
+        els.expiryLabel.textContent =
+          usageData.days_until_expiry === undefined || usageData.days_until_expiry === null
+            ? "-"
+            : `${usageData.days_until_expiry} 天`;
+        els.status.textContent = usingExampleData
+          ? "当前显示示例数据。运行 python3 usage-static.py collect 后会读取本地 usage-data.js。"
+          : "页面只读取 usage-data.js；配置和密钥由采集脚本从 config.yaml 读取。";
+
+        updateMetrics();
+        renderChart();
+        renderModels();
+        renderTable();
+        renderCsv();
+      }
+
+      function loadGeneratedData() {
+        return new Promise((resolve) => {
+          const script = document.createElement("script");
+          script.src = "./usage-data.js";
+          script.onload = () => {
+            if (window.DAILY_TOKEN_USAGE_DATA) {
+              usageData = window.DAILY_TOKEN_USAGE_DATA;
+              usingExampleData = false;
+            }
+            resolve();
+          };
+          script.onerror = () => resolve();
+          document.head.appendChild(script);
+        });
+      }
+
+      document.querySelectorAll(".tab").forEach((button) => {
+        button.addEventListener("click", () => {
+          activePeriod = button.dataset.period;
+          document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          updateMetrics();
+        });
+      });
+
+      loadGeneratedData().then(() => {
+        render();
+        if (usageData?.refresh_minutes) {
+          window.setTimeout(() => window.location.reload(), Math.max(1, usageData.refresh_minutes) * 60 * 1000);
+        }
+      });
+    </script>
+  </body>
+</html>

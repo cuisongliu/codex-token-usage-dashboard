@@ -1,0 +1,14 @@
+# Copy this file to config.yaml, or run:
+#   python3 usage-static.py sync-config
+#
+# Keep config.yaml private. It contains an API key.
+mode: "codex"
+provider: "OpenAI"
+base_url: "https://your-sub2api.example.com"
+api_prefix: "/v1"
+auth_token: "replace-with-your-api-key"
+timezone: "Asia/Shanghai"
+days: 31
+refresh_minutes: 5
+data_json: "usage-data.json"
+data_js: "usage-data.js"

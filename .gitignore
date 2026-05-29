@@ -1,0 +1,9 @@
+config.yaml
+usage-data.json
+usage-data.js
+usage-refresh.log
+usage-refresh.err.log
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
